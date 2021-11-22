@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
@@ -11,10 +11,10 @@ import traceback
 import logging
 import sys
 import argparse
-import thread
+import _thread
 from optparse import OptionParser
 import subprocess
-import urllib2
+import urllib
 import threading
 import signal
 import globals
@@ -46,7 +46,7 @@ class Teleinfo:
             logging.info("TELEINFO------OPEN CONNECTION")
             globals.TELEINFO_SERIAL = serial.Serial(globals.port, globals.vitesse, bytesize=7, parity='E', stopbits=1)
             logging.info("TELEINFO------CONNECTION OPENED")
-        except:
+        except Exception:
             logging.error("Error opening Teleinfo modem '%s' : %s" % (globals.port, traceback.format_exc()))
 
     def close(self):
@@ -58,7 +58,7 @@ class Teleinfo:
             logging.info("TELEINFO------CONNECTION CLOSED")
 
     def terminate(self):
-        print "Terminating..."
+        print ("Terminating...")
         self.close()
         os.remove("/tmp/teleinfo_" + options.type + ".pid")
         sys.exit()
@@ -71,13 +71,13 @@ class Teleinfo:
         @return frame : list of dict {name, value, checksum}
         """
         if globals.mode == "standard": # Zone linky standard
-            resp = globals.TELEINFO_SERIAL.readline()
+            resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
             is_ok = False
             content = {}
             while not is_ok:
                 try:
                     while 'ADSC' not in resp:
-                        resp = globals.TELEINFO_SERIAL.readline()
+                        resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
                         if len(resp.replace('\r', '').replace('\n', '').split('\x09')) == 4:
                             name, horodate, value, checksum = resp.replace('\r', '').replace('\n', '').split('\x09')
                             checksum = ' '
@@ -101,16 +101,16 @@ class Teleinfo:
                     checksum = ' '
         else: # Zone historique
             #Get the begin of the frame, markde by \x02
-            resp = globals.TELEINFO_SERIAL.readline()
+            resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
             is_ok = False
             content = {}
             while not is_ok:
                 try:
                     while '\x02' not in resp:
-                        resp = globals.TELEINFO_SERIAL.readline()
+                        resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
                     #\x02 is in the last line of a frame, so go until the next one
                     #print "* Begin frame"
-                    resp = globals.TELEINFO_SERIAL.readline()
+                    resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
                     #A new frame starts
                     #\x03 is the end of the frame
                     while '\x03' not in resp:
@@ -130,9 +130,9 @@ class Teleinfo:
                             logging.error('** FRAME : ' + resp + '**')
                             #This frame is corrupted, we need to wait until the next one
                             while '\x02' not in resp:
-                                resp = globals.TELEINFO_SERIAL.readline()
+                                resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
                             logging.error("* New frame after corrupted")
-                        resp = globals.TELEINFO_SERIAL.readline()
+                        resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
                     #\x03 has been detected, that's the last line of the frame
                     if len(resp.replace('\r', '').replace('\n', '').split()) == 2:
                         name, value = resp.replace('\r', '').replace('\n', '').replace('\x02', '').replace('\x03', '').split()
@@ -145,12 +145,12 @@ class Teleinfo:
                         is_ok = True
                     else:
                         logging.error("** Last frame invalid")
-                        resp = globals.TELEINFO_SERIAL.readline()
+                        resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
                 except ValueError:
                     #Badly formatted frame
                     #This frame is corrupted, we need to wait until the next one
                     while '\x02' not in resp:
-                        resp = globals.TELEINFO_SERIAL.readline()
+                        resp = (globals.TELEINFO_SERIAL.readline().decode("UTF-8"))
         return content
 
     def _is_valid(self, frame, checksum):
@@ -184,8 +184,6 @@ class Teleinfo:
         data = {}
         data_temp = {}
         raz_calcul = 0
-        separateur = " "
-        send_data = ""
 
         # Read a frame
         raz_time = datetime.now()
@@ -194,17 +192,12 @@ class Teleinfo:
             if raz_calcul.seconds > 60:
                 logging.info("TELEINFO------HEARTBEAT")
                 raz_time = datetime.now()
-                for cle, valeur in data.items():
+                for cle, valeur in list(data.items()):
                     data.pop(cle)
                     data_temp.pop(cle)
-            send_data = ""
             frameCsv = self.read()
-            for cle, valeur in frameCsv.items():
-                if cle == 'PTEC':
-                    valeur = valeur.replace(".", "")
-                    valeur = valeur.replace(")", "")
-                    data[cle] = valeur
-                elif cle == 'OPTARIF':
+            for cle, valeur in list(frameCsv.items()):
+                if cle == 'PTEC' or cle == 'OPTARIF':
                     valeur = valeur.replace(".", "")
                     valeur = valeur.replace(")", "")
                     data[cle] = valeur
@@ -213,7 +206,7 @@ class Teleinfo:
                     data[cle] = valeur
             _SendData = {}
             PENDING_CHANGES = False
-            for cle, valeur in data.items():
+            for cle, valeur in list(data.items()):
                 if cle in data_temp:
                     if data[cle] != data_temp[cle]:
                         _SendData[cle] = valeur
@@ -232,8 +225,7 @@ class Teleinfo:
                         _SendData["device"] = data["ADCO"]
                         globals.JEEDOM_COM.add_changes('device::'+data["ADCO"],_SendData)
             except Exception:
-                errorCom = "Connection error"
-                logging.error(errorCom)
+                logging.error("Connection error")
             logging.debug("TELEINFO------START SLEEPING " + str(globals.cycle_sommeil) + " seconds")
             time.sleep(globals.cycle_sommeil)
             logging.debug("TELEINFO------WAITING : " + str(globals.TELEINFO_SERIAL.inWaiting()) + " octets dans la file apres sleep ")
@@ -255,10 +247,10 @@ def read_socket(cycle):
 				if message['apikey'] != globals.apikey:
 					logging.error("SOCKET-READ------Invalid apikey from socket : " + str(message))
 					return
-				logging.debug('SOCKET-READ------Received command from jeedom : '+str(message['cmd']))
+				logging.debug('SOCKET-READ------Received command from jeedom : ' + str(message['cmd']))
 				if message['cmd'] == 'action':
 					logging.debug('SOCKET-READ------Attempt an action on a device')
-					thread.start_new_thread( action_handler, (message,))
+					#_thread.start_new_thread( action_handler, (message,))
 					logging.debug('SOCKET-READ------Action Thread Launched')
 				elif message['cmd'] == 'logdebug':
 					logging.info('SOCKET-READ------Passage du demon en mode debug force')
@@ -292,18 +284,18 @@ def listen():
 	logging.info("GLOBAL------Start listening...")
 	globals.TELEINFO = Teleinfo()
 	logging.info("GLOBAL------Preparing Teleinfo...")
-	thread.start_new_thread( read_socket, (globals.cycle,))
+	_thread.start_new_thread( read_socket, (globals.cycle,))
 	logging.debug('GLOBAL------Read Socket Thread Launched')
 	while 1:
 		try:
 			try:
 				logging.info("TELEINFO------RUN")
 				globals.TELEINFO.open()
-			except error as err:
+			except Exception as err:
 				logging.error(err.value)
 				globals.TELEINFO.terminate()
 				return
-			thread.start_new_thread( log_starting,(globals.cycle,))
+			_thread.start_new_thread( log_starting,(globals.cycle,))
 			globals.TELEINFO.run()
 		except Exception as e:
 			print("Error:")
@@ -323,11 +315,11 @@ def shutdown():
 	logging.info("Removing PID file " + str(globals.pidfile))
 	try:
 		os.remove(globals.pidfile)
-	except:
+	except Exception:
 		pass
 	try:
 		jeedom_socket.close()
-	except:
+	except Exception:
 		pass
 	logging.debug("Exit 0")
 	sys.stdout.flush()

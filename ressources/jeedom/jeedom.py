@@ -166,7 +166,7 @@ class jeedom_utils():
 
 	@staticmethod
 	def dec2bin(x, width=8):
-		return ''.join(str((x>>i)&1) for i in xrange(width-1,-1,-1))
+		return ''.join(str((x>>i)&1) for i in range(width-1,-1,-1))
 
 	@staticmethod
 	def dec2hex(dec):
@@ -192,11 +192,11 @@ class jeedom_utils():
 	def write_pid(path):
 		pid = str(os.getpid())
 		logging.debug("Writing PID " + pid + " to " + str(path))
-		file(path, 'w').write("%s\n" % pid)
+		open(path, 'w').write("%s\n" % pid)
 
 	@staticmethod
 	def remove_accents(input_str):
-		nkfd_form = unicodedata.normalize('NFKD', unicode(input_str))
+		nkfd_form = unicodedata.normalize('NFKD', str(input_str))
 		return u"".join([c for c in nkfd_form if not unicodedata.combining(c)])
 
 # ------------------------------------------------------------------------------
@@ -219,7 +219,7 @@ class jeedom_serial():
 		logging.debug("Open Serialport")
 		try:
 			self.port = serial.Serial(self.device,self.rate,timeout=self.timeout)
-		except serial.SerialException, e:
+		except serial.SerialException as e:
 			logging.error("Error: Failed to connect on device " + self.device + " Details : " + str(e))
 			return False
 		if not self.port.isOpen():
@@ -234,7 +234,7 @@ class jeedom_serial():
 			self.port.close()
 			logging.debug("Serial port closed")
 			return True
-		except:
+		except Exception:
 			logging.error("Failed to close the serial port (" + self.device + ")")
 			return False
 
@@ -254,7 +254,7 @@ class jeedom_serial():
 		try:
 			if self.port.inWaiting() != 0:
 				return self.port.read()
-		except IOError, e:
+		except IOError as e:
 			logging.error("Serial read error: %s" % (str(e)))
 		return None
 
@@ -263,9 +263,9 @@ class jeedom_serial():
 		for i in range(number):
 			try:
 				byte = self.port.read()
-			except IOError, e:
+			except IOError as e:
 				logging.error("Error: %s" % e)
-			except OSError, e:
+			except OSError as e:
 				logging.error("Error: %s" % e)
 			buf += byte
 		return buf

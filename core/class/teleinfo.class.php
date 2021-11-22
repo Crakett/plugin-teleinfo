@@ -279,11 +279,11 @@ class teleinfo extends eqLogic
 
         if ($twoCptCartelectronic == 1) {
             log::add('teleinfo', 'info', '[' . $type . '] Fonctionnement en mode 2 compteur');
-            $cmd          = 'sudo nice -n 19 /usr/bin/python ' . $teleinfoPath . '/teleinfo_2_cpt.py';
+            $cmd          = 'sudo nice -n 19 /usr/bin/python3 ' . $teleinfoPath . '/teleinfo_2_cpt.py';
         }
 		else {
             log::add('teleinfo', 'info', '[' . $type . '] Fonctionnement en mode 1 compteur');
-            $cmd          = 'nice -n 19 /usr/bin/python ' . $teleinfoPath . '/teleinfo.py';
+            $cmd          = 'nice -n 19 /usr/bin/python3 ' . $teleinfoPath . '/teleinfo.py';
             $cmd         .= ' --type ' . $type;
         }
 		$cmd         .= ' --port ' . $port;
